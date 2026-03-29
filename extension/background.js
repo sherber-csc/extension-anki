@@ -1,4 +1,4 @@
-import { captureSelection } from "./api-client.js";
+import { captureSelection, resolveBackendBaseUrl } from "./api-client.js";
 import { getNotificationText } from "./notifier.js";
 import { SOURCE_TYPES } from "./protocol.js";
 
@@ -61,17 +61,4 @@ function detectSourceType(url) {
     return YOUTUBE_SOURCE_TYPE;
   }
   return WEB_SOURCE_TYPE;
-}
-
-function resolveBackendBaseUrl() {
-  const manifest = chrome.runtime.getManifest();
-  const hostPermission = manifest.host_permissions.find((value) =>
-    typeof value === "string" && value.startsWith("http://127.0.0.1:")
-  );
-
-  if (!hostPermission) {
-    return null;
-  }
-
-  return hostPermission.replace(/\/\*$/, "");
 }

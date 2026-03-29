@@ -39,6 +39,7 @@
     }
   },
   "action": {
-    "default_title": "Capture selected word"
+    "default_title": "Capture selected word",
+    "default_popup": "popup.html"
   }
 }
