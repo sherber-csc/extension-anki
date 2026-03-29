@@ -8,6 +8,91 @@ from pathlib import Path
 
 from backend.anki_client import AnkiConnectClient
 from backend.config import AppConfig, DEFAULT_CONFIG
+from backend.note_fields import NOTE_TYPE_FIELDS
+from backend.schemas import PreflightCheckResult
+
+_NOTE_TYPE_CSS = """
+.card {
+  font-family: Arial, sans-serif;
+  font-size: 18px;
+  text-align: left;
+  color: #222;
+  background: white;
+}
+
+.front {
+  text-align: center;
+}
+
+.front .emoji {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.front .word {
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 12px;
+}
+
+.front .ipa {
+  font-size: 22px;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.front .image-prompt {
+  font-size: 16px;
+  color: #555;
+}
+
+.section {
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.forms {
+  color: #666;
+}
+""".strip()
+
+_CARD_TEMPLATES = [
+    {
+        "Name": "Card 1",
+        "Front": """
+<div class="front">
+  <div class="emoji">{{emoji}}</div>
+  <div class="word">{{word}}</div>
+  {{#audio}}<div>[sound:{{audio}}]</div>{{/audio}}
+  <div class="ipa">{{ipa}}</div>
+  <div class="image-prompt">{{image_prompt}}</div>
+</div>
+""".strip(),
+        "Back": """
+{{FrontSide}}
+<hr id=answer>
+<div class="section">
+  <div class="section-title">Meaning</div>
+  <div>{{meanings}}</div>
+</div>
+{{#forms}}
+<div class="section forms">Forms: {{forms}}</div>
+{{/forms}}
+<div class="section">
+  <div class="section-title">Pair</div>
+  <div>{{pairs}}</div>
+</div>
+<div class="section">
+  <div class="section-title">Example</div>
+  <div>{{examples}}</div>
+</div>
+""".strip(),
+    }
+]
 
 
 class AnkiService:
@@ -36,6 +121,83 @@ class AnkiService:
         raise RuntimeError(
             "anki unavailable: Anki was started, but AnkiConnect did not become available in time."
         )
+
+    def check_collection_setup(self) -> PreflightCheckResult:
+        if not self.is_available():
+            return PreflightCheckResult(
+                ok=False,
+                message="AnkiConnect is not available.",
+            )
+
+        try:
+            deck_names = self.client.deck_names()
+            model_names = self.client.model_names()
+        except RuntimeError as exc:
+            return PreflightCheckResult(
+                ok=False,
+                message=f"Failed to inspect Anki collection setup: {exc}",
+            )
+
+        if self.config.default_deck_name not in deck_names:
+            return PreflightCheckResult(
+                ok=False,
+                message=f"Missing required deck: {self.config.default_deck_name}.",
+            )
+
+        if self.config.default_note_type_name not in model_names:
+            return PreflightCheckResult(
+                ok=False,
+                message=f"Missing required note type: {self.config.default_note_type_name}.",
+            )
+
+        try:
+            actual_fields = self.client.model_field_names(
+                model_name=self.config.default_note_type_name
+            )
+        except RuntimeError as exc:
+            return PreflightCheckResult(
+                ok=False,
+                message=f"Failed to inspect note type fields: {exc}",
+            )
+
+        mismatch_message = self._note_type_field_mismatch_message(actual_fields)
+        if mismatch_message is not None:
+            return PreflightCheckResult(
+                ok=False,
+                message=mismatch_message,
+            )
+
+        return PreflightCheckResult(
+            ok=True,
+            message=(
+                f"Anki collection setup is ready: deck '{self.config.default_deck_name}' "
+                f"and note type '{self.config.default_note_type_name}' are available."
+            ),
+        )
+
+    def ensure_collection_setup(self) -> None:
+        self.ensure_generation_ready()
+
+        deck_names = self.client.deck_names()
+        if self.config.default_deck_name not in deck_names:
+            self.client.create_deck(deck=self.config.default_deck_name)
+
+        model_names = self.client.model_names()
+        if self.config.default_note_type_name not in model_names:
+            self.client.create_model(
+                model_name=self.config.default_note_type_name,
+                in_order_fields=list(NOTE_TYPE_FIELDS),
+                css=_NOTE_TYPE_CSS,
+                card_templates=_CARD_TEMPLATES,
+            )
+            return
+
+        actual_fields = self.client.model_field_names(
+            model_name=self.config.default_note_type_name
+        )
+        mismatch_message = self._note_type_field_mismatch_message(actual_fields)
+        if mismatch_message is not None:
+            raise RuntimeError(mismatch_message)
 
     def contains_word_key(self, word_key: str) -> bool:
         query = f'note:"{self.config.default_note_type_name}" word_key:{word_key}'
@@ -104,3 +266,22 @@ class AnkiService:
                 seen.add(candidate)
                 deduped.append(candidate)
         return deduped
+
+    def _note_type_field_mismatch_message(self, actual_fields: list[str]) -> str | None:
+        expected_fields = list(NOTE_TYPE_FIELDS)
+        missing_fields = [field for field in expected_fields if field not in actual_fields]
+        extra_fields = [field for field in actual_fields if field not in expected_fields]
+        if not missing_fields and not extra_fields:
+            return None
+
+        differences: list[str] = []
+        if missing_fields:
+            differences.append(f"missing fields: {', '.join(missing_fields)}")
+        if extra_fields:
+            differences.append(f"extra fields: {', '.join(extra_fields)}")
+
+        joined_differences = "; ".join(differences)
+        return (
+            f"Note type '{self.config.default_note_type_name}' fields mismatch: "
+            f"{joined_differences}."
+        )

@@ -25,12 +25,4 @@ class GenerationPreflightService:
         )
 
     def _anki_check(self) -> PreflightCheckResult:
-        if self.anki_service.is_available():
-            return PreflightCheckResult(
-                ok=True,
-                message="AnkiConnect is available.",
-            )
-        return PreflightCheckResult(
-            ok=False,
-            message="AnkiConnect is not available.",
-        )
+        return self.anki_service.check_collection_setup()

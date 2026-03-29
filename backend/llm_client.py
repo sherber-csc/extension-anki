@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
+import re
 import urllib.error
 import urllib.request
 
 from backend.schemas import GeneratedNoteContent, PreflightCheckResult
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """You generate structured vocabulary card content for a single English word.
 Return only one strict JSON object with these keys:
@@ -34,11 +38,16 @@ class LLMClient:
         api_key: str | None = None,
         base_url: str | None = None,
         model: str | None = None,
+        request_timeout_seconds: int | None = None,
     ) -> None:
         env_file_values = _load_project_env_file()
         self.api_key = api_key if api_key is not None else (os.getenv("LLM_API_KEY") or env_file_values.get("LLM_API_KEY"))
         self.base_url = base_url if base_url is not None else (os.getenv("LLM_BASE_URL") or env_file_values.get("LLM_BASE_URL"))
         self.model = model if model is not None else (os.getenv("LLM_MODEL") or env_file_values.get("LLM_MODEL") or "MiniMax-M2.1")
+        self.request_timeout_seconds = _resolve_request_timeout_seconds(
+            request_timeout_seconds=request_timeout_seconds,
+            env_value=os.getenv("LLM_REQUEST_TIMEOUT_SECONDS") or env_file_values.get("LLM_REQUEST_TIMEOUT_SECONDS"),
+        )
 
     def preflight_check(self) -> PreflightCheckResult:
         missing_fields: list[str] = []
@@ -74,13 +83,18 @@ class LLMClient:
         )
 
         try:
-            with urllib.request.urlopen(request, timeout=60) as response:
+            with urllib.request.urlopen(request, timeout=self.request_timeout_seconds) as response:
                 payload = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="ignore")
-            raise RuntimeError(f"llm request failed: HTTP {exc.code} {detail}".strip()) from exc
+            raise RuntimeError(
+                f"llm request failed after timeout={self.request_timeout_seconds}s: "
+                f"HTTP {exc.code} {detail}".strip()
+            ) from exc
         except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
-            raise RuntimeError(f"llm request failed: {exc}") from exc
+            raise RuntimeError(
+                f"llm request failed after timeout={self.request_timeout_seconds}s: {exc}"
+            ) from exc
 
         content_text = self._extract_content_text(payload)
         data = self._parse_response_json(content_text)
@@ -124,11 +138,13 @@ class LLMClient:
                         "content": self._build_user_prompt(word=word, source_sentence=source_sentence),
                     },
                 ],
+                "reasoning_split": True,
             }
         return {
             "model": self.model,
             "messages": messages,
             "temperature": 0.4,
+            "reasoning_split": True,
         }
 
     @staticmethod
@@ -168,16 +184,25 @@ class LLMClient:
 
     @staticmethod
     def _parse_response_json(content_text: str) -> dict:
-        text = content_text.strip()
-        if text.startswith("```"):
-            lines = text.splitlines()
-            if len(lines) >= 3:
-                text = "\n".join(lines[1:-1]).strip()
+        text = _strip_think_blocks(content_text).strip()
+        text = _strip_fenced_code_blocks(text).strip()
 
         try:
             return json.loads(text)
         except json.JSONDecodeError as exc:
-            raise RuntimeError(f"llm response invalid: JSON parse failed: {exc}") from exc
+            try:
+                extracted = _extract_first_json_object(text)
+            except ValueError:
+                logger.error("LLM raw message.content that failed JSON parse:\n%s", content_text)
+                raise RuntimeError(f"llm response invalid: JSON parse failed: {exc}") from exc
+
+            try:
+                return json.loads(extracted)
+            except json.JSONDecodeError as nested_exc:
+                logger.error("LLM raw message.content that failed JSON parse:\n%s", content_text)
+                raise RuntimeError(
+                    f"llm response invalid: JSON parse failed: {nested_exc}"
+                ) from nested_exc
 
     @staticmethod
     def _validate_generated_content(data: dict) -> GeneratedNoteContent:
@@ -225,3 +250,96 @@ def _load_project_env_file() -> dict[str, str]:
         key, value = stripped.split("=", 1)
         values[key.strip()] = value.strip().strip('"').strip("'")
     return values
+
+
+def _resolve_request_timeout_seconds(
+    *,
+    request_timeout_seconds: int | None,
+    env_value: str | None,
+) -> int:
+    default_timeout_seconds = 180
+    if request_timeout_seconds is not None and request_timeout_seconds > 0:
+        return request_timeout_seconds
+
+    if env_value is None:
+        return default_timeout_seconds
+
+    try:
+        parsed_timeout_seconds = int(str(env_value).strip())
+    except (TypeError, ValueError):
+        return default_timeout_seconds
+
+    if parsed_timeout_seconds <= 0:
+        return default_timeout_seconds
+
+    return parsed_timeout_seconds
+
+
+def _strip_think_blocks(text: str) -> str:
+    return re.sub(r"<think>.*?</think>\s*", "", text, flags=re.DOTALL)
+
+
+def _strip_fenced_code_blocks(text: str) -> str:
+    if "```" not in text:
+        return text
+
+    cleaned_lines: list[str] = []
+    in_fence = False
+    for line in text.splitlines():
+        if line.strip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        cleaned_lines.append(line)
+    return "\n".join(cleaned_lines)
+
+
+def _extract_first_json_object(text: str) -> str:
+    candidate_start = text.find("{")
+    if candidate_start == -1:
+        raise ValueError("no JSON object found")
+
+    depth = 0
+    in_string = False
+    escape = False
+    candidate_end: int | None = None
+
+    for index in range(candidate_start, len(text)):
+        char = text[index]
+
+        if in_string:
+            if escape:
+                escape = False
+            elif char == "\\":
+                escape = True
+            elif char == '"':
+                in_string = False
+            continue
+
+        if char == '"':
+            in_string = True
+            continue
+
+        if char == "{":
+            depth += 1
+            continue
+
+        if char == "}":
+            depth -= 1
+            if depth < 0:
+                raise ValueError("invalid JSON object structure")
+            if depth == 0:
+                candidate_end = index + 1
+                break
+
+    if candidate_end is None or depth != 0:
+        raise ValueError("no complete top-level JSON object found")
+
+    candidate = text[candidate_start:candidate_end]
+    if not candidate.startswith("{") or not candidate.endswith("}"):
+        raise ValueError("invalid top-level JSON object")
+
+    trailing_text = text[candidate_end:].lstrip()
+    if trailing_text.startswith(("{", "[", '"', "-", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "true", "false", "null")):
+        raise ValueError("multiple JSON values detected")
+
+    return candidate

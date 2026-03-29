@@ -27,3 +27,9 @@ NON_DISPLAY_NOTE_FIELDS: Final[tuple[str, ...]] = (
 )
 
 INTERMEDIATE_FIELDS: Final[tuple[str, ...]] = ("source_sentence",)
+
+NOTE_TYPE_FIELDS: Final[tuple[str, ...]] = (
+    *DISPLAY_FIELDS,
+    *WEAK_DISPLAY_FIELDS,
+    *NON_DISPLAY_NOTE_FIELDS,
+)
