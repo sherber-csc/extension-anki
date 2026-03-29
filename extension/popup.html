@@ -68,9 +68,13 @@
   <body>
     <header>
       <h1>Queue</h1>
-      <button id="refresh-button" type="button">Refresh</button>
+      <div>
+        <button id="generate-button" type="button">Generate pending cards</button>
+        <button id="refresh-button" type="button">Refresh</button>
+      </div>
     </header>
     <div id="status">Loading...</div>
+    <div id="action-message"></div>
     <section>
       <h2>Pending</h2>
       <div id="pending-list"></div>

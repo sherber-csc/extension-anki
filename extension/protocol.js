@@ -1,6 +1,19 @@
 // Generated from backend/contracts.py. Do not edit by hand.
 const PROTOCOL = Object.freeze({
   "captureEndpoint": "/api/captures",
+  "generatePendingEndpoint": "/generate-pending",
+  "generatePendingResponseFields": [
+    "status",
+    "message",
+    "processed_count",
+    "success_count",
+    "failed_count"
+  ],
+  "generatePendingResponseStatuses": [
+    "ok",
+    "partial_failure",
+    "no_pending_items"
+  ],
   "optionalFields": [
     "source_sentence",
     "source_title",
@@ -58,6 +71,9 @@ const PROTOCOL = Object.freeze({
 
 export const CAPTURE_ENDPOINT = PROTOCOL.captureEndpoint;
 export const QUEUE_ENDPOINT = PROTOCOL.queueEndpoint;
+export const GENERATE_PENDING_ENDPOINT = PROTOCOL.generatePendingEndpoint;
+export const GENERATE_PENDING_RESPONSE_FIELDS = Object.freeze(PROTOCOL.generatePendingResponseFields);
+export const GENERATE_PENDING_RESPONSE_STATUSES = Object.freeze(PROTOCOL.generatePendingResponseStatuses);
 export const REQUEST_FIELDS = Object.freeze(PROTOCOL.requestFields);
 export const REQUIRED_FIELDS = Object.freeze(PROTOCOL.requiredFields);
 export const OPTIONAL_FIELDS = Object.freeze(PROTOCOL.optionalFields);

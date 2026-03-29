@@ -10,7 +10,8 @@ from backend.anki_client import AnkiConnectClient
 from backend.anki_service import AnkiService
 from backend.capture_service import CaptureService
 from backend.config import AppConfig, DEFAULT_CONFIG
-from backend.contracts import QUEUE_ENDPOINT, RESPONSE_STATUS_TEXTS
+from backend.contracts import GENERATE_PENDING_ENDPOINT, QUEUE_ENDPOINT, RESPONSE_STATUS_TEXTS
+from backend.generation_service import GenerationService
 from backend.lemmatizer import lemmatize_word
 from backend.normalization import normalize_surface_form
 from backend.queue_manager import QueueManager
@@ -23,6 +24,7 @@ class AppContext:
     config: AppConfig
     capture_service: CaptureService
     queue_manager: QueueManager
+    generation_service: GenerationService
 
 
 def build_app_context(config: AppConfig = DEFAULT_CONFIG) -> AppContext:
@@ -40,10 +42,12 @@ def build_app_context(config: AppConfig = DEFAULT_CONFIG) -> AppContext:
         normalize_surface_form=normalize_surface_form,
         lemmatize_word=lemmatize_word,
     )
+    generation_service = GenerationService(queue_manager=queue_manager)
     return AppContext(
         config=config,
         capture_service=capture_service,
         queue_manager=queue_manager,
+        generation_service=generation_service,
     )
 
 
@@ -72,6 +76,11 @@ def create_handler(context: AppContext):
             self._send_json(HTTPStatus.NOT_FOUND, {"status": "not_found"})
 
         def do_POST(self) -> None:  # noqa: N802
+            if self.path == GENERATE_PENDING_ENDPOINT:
+                response_payload = context.generation_service.generate_pending().to_dict()
+                self._send_json(HTTPStatus.OK, response_payload)
+                return
+
             if self.path != context.config.capture_endpoint:
                 self._send_json(HTTPStatus.NOT_FOUND, {"status": "not_found"})
                 return

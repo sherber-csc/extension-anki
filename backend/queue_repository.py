@@ -127,3 +127,45 @@ class QueueRepository:
             ).fetchall()
 
         return [QueueRecord.from_row(tuple(row)) for row in rows]
+
+    def list_by_status(self, *, status: str, limit: int | None = None) -> list[QueueRecord]:
+        query = """
+            SELECT
+                record_id,
+                surface_form,
+                normalized_form,
+                lemma,
+                word_key,
+                source_sentence,
+                source_title,
+                source_url,
+                source_type,
+                source_timestamp,
+                captured_at,
+                status,
+                error_message,
+                generator_version
+            FROM queue_records
+            WHERE status = ?
+            ORDER BY captured_at DESC, record_id DESC
+        """
+        params: list[object] = [status]
+        if limit is not None:
+            query += "\nLIMIT ?"
+            params.append(limit)
+
+        with self.storage.connect() as connection:
+            rows = connection.execute(query, params).fetchall()
+
+        return [QueueRecord.from_row(tuple(row)) for row in rows]
+
+    def update_status(self, *, record_id: int, status: str, error_message: str) -> None:
+        with self.storage.connect() as connection:
+            connection.execute(
+                """
+                UPDATE queue_records
+                SET status = ?, error_message = ?
+                WHERE record_id = ?
+                """,
+                (status, error_message, record_id),
+            )

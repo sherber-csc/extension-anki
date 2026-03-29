@@ -1,18 +1,25 @@
-import { fetchQueue, resolveBackendBaseUrl } from "./api-client.js";
+import { fetchQueue, generatePending, resolveBackendBaseUrl } from "./api-client.js";
 
 const backendBaseUrl = resolveBackendBaseUrl();
 const refreshButton = document.getElementById("refresh-button");
+const generateButton = document.getElementById("generate-button");
 const statusElement = document.getElementById("status");
+const actionMessageElement = document.getElementById("action-message");
 const pendingListElement = document.getElementById("pending-list");
 
 refreshButton.addEventListener("click", async () => {
   await loadQueue();
 });
 
+generateButton.addEventListener("click", async () => {
+  await handleGeneratePending();
+});
+
 loadQueue();
 
 async function loadQueue() {
   refreshButton.disabled = true;
+  generateButton.disabled = true;
   refreshButton.textContent = "Loading...";
   statusElement.textContent = "Loading queue...";
   pendingListElement.textContent = "";
@@ -26,6 +33,7 @@ async function loadQueue() {
     pendingListElement.innerHTML = '<div class="empty">No data available.</div>';
   } finally {
     refreshButton.disabled = false;
+    generateButton.disabled = false;
     refreshButton.textContent = "Refresh";
   }
 }
@@ -60,4 +68,24 @@ function createLine(text) {
   const line = document.createElement("div");
   line.textContent = text;
   return line;
+}
+
+async function handleGeneratePending() {
+  generateButton.disabled = true;
+  generateButton.textContent = "Generating...";
+  actionMessageElement.textContent = "Generating pending cards...";
+
+  try {
+    const result = await generatePending(backendBaseUrl);
+    actionMessageElement.textContent =
+      `${result.status}: ${result.message} ` +
+      `(processed=${result.processed_count}, success=${result.success_count}, failed=${result.failed_count})`;
+    await loadQueue();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error.";
+    actionMessageElement.textContent = `Generate failed: ${message}`;
+  } finally {
+    generateButton.disabled = false;
+    generateButton.textContent = "Generate pending cards";
+  }
 }

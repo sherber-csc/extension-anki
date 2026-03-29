@@ -16,4 +16,4 @@ def sync_protocol(output_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    sync_protocol(Path("extension/protocol.js"))
+    sync_protocol(PROJECT_ROOT / "extension" / "protocol.js")

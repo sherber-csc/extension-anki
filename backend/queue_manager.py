@@ -27,3 +27,9 @@ class QueueManager:
 
     def list_recent(self, *, limit: int) -> list[QueueRecord]:
         return self.repository.list_recent(limit=limit)
+
+    def list_by_status(self, *, status: str, limit: int | None = None) -> list[QueueRecord]:
+        return self.repository.list_by_status(status=status, limit=limit)
+
+    def update_status(self, *, record_id: int, status: str, error_message: str) -> None:
+        self.repository.update_status(record_id=record_id, status=status, error_message=error_message)

@@ -96,3 +96,15 @@ class CaptureResponse:
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
         return {key: value for key, value in payload.items() if value is not None}
+
+
+@dataclass(frozen=True)
+class GeneratePendingResponse:
+    status: str
+    message: str
+    processed_count: int
+    success_count: int
+    failed_count: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
