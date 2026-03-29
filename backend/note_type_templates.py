@@ -122,8 +122,13 @@ NOTE_TYPE_CSS = """
 .sherber-back .pair-list,
 .sherber-back .example-list {
   margin: 0;
-  padding-left: 0;
-  list-style: none;
+  padding-left: 28px;
+  list-style: disc;
+}
+
+.sherber-back .pair-list li::marker,
+.sherber-back .example-list li::marker {
+  color: #000000;
 }
 
 .sherber-back .pair-item,

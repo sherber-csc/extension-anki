@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 LEMMA_OVERRIDES: dict[str, str] = {
+    "conditionals": "conditional",
+    "materials": "materials",
     "organised": "organise",
     "organising": "organise",
     "organises": "organise",
