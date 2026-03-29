@@ -128,6 +128,37 @@ class QueueRepository:
 
         return [QueueRecord.from_row(tuple(row)) for row in rows]
 
+    def get_oldest_pending(self) -> QueueRecord | None:
+        with self.storage.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT
+                    record_id,
+                    surface_form,
+                    normalized_form,
+                    lemma,
+                    word_key,
+                    source_sentence,
+                    source_title,
+                    source_url,
+                    source_type,
+                    source_timestamp,
+                    captured_at,
+                    status,
+                    error_message,
+                    generator_version
+                FROM queue_records
+                WHERE status = 'pending'
+                ORDER BY record_id ASC
+                LIMIT 1
+                """
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return QueueRecord.from_row(tuple(row))
+
     def list_by_status(self, *, status: str, limit: int | None = None) -> list[QueueRecord]:
         query = """
             SELECT

@@ -15,6 +15,7 @@ class AppConfig:
     health_endpoint: str = "/health"
     database_path: Path = Path("data/queue.db")
     anki_connect_url: str = "http://127.0.0.1:8765"
+    audio_output_dir: Path = Path("data/audio")
 
 
 DEFAULT_CONFIG = AppConfig()

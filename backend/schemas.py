@@ -105,6 +105,95 @@ class GeneratePendingResponse:
     processed_count: int
     success_count: int
     failed_count: int
+    record_id: int | None = None
+    word_key: str | None = None
+    error_message: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        payload = asdict(self)
+        return {key: value for key, value in payload.items() if value is not None}
+
+
+@dataclass(frozen=True)
+class PreflightCheckResult:
+    ok: bool
+    message: str
+
+
+@dataclass(frozen=True)
+class GeneratedAudio:
+    filename: str
+    file_path: str
+
+
+@dataclass(frozen=True)
+class GeneratedNoteContent:
+    word: str
+    ipa: str
+    emoji: str
+    image_prompt: str
+    meanings: list[str]
+    pairs: list[str]
+    examples: list[str]
+
+
+@dataclass(frozen=True)
+class SingleGenerationResult:
+    status: str
+    record_id: int
+    word_key: str
+    error_message: str
+    note_id: int | None = None
+    audio_filename: str | None = None
+
+    @classmethod
+    def success(
+        cls,
+        *,
+        record_id: int,
+        word_key: str,
+        note_id: int,
+        audio_filename: str,
+    ) -> "SingleGenerationResult":
+        return cls(
+            status="success",
+            record_id=record_id,
+            word_key=word_key,
+            error_message="",
+            note_id=note_id,
+            audio_filename=audio_filename,
+        )
+
+    @classmethod
+    def failed(
+        cls,
+        *,
+        record_id: int,
+        word_key: str,
+        error_message: str,
+    ) -> "SingleGenerationResult":
+        return cls(
+            status="failed",
+            record_id=record_id,
+            word_key=word_key,
+            error_message=error_message,
+            note_id=None,
+            audio_filename=None,
+        )
+
+
+@dataclass(frozen=True)
+class GenerationPreflightResponse:
+    status: str
+    summary: str
+    checks: dict[str, PreflightCheckResult]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "status": self.status,
+            "summary": self.summary,
+            "checks": {
+                name: asdict(result)
+                for name, result in self.checks.items()
+            },
+        }

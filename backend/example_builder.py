@@ -6,16 +6,10 @@ def build_examples(source_sentence: str | None, generated_examples: list[str]) -
 
     if source_sentence is not None:
         source_text = str(source_sentence).strip()
+        examples: list[str] = []
         if source_text:
-            if len(cleaned_generated) < 2:
-                raise ValueError("At least two generated examples are required when source_sentence is present.")
-            return [
-                f"{source_text} (source sentence)",
-                cleaned_generated[0],
-                cleaned_generated[1],
-            ]
-
-    if len(cleaned_generated) < 3:
-        raise ValueError("At least three generated examples are required when source_sentence is absent.")
+            examples.append(f"{source_text} (source sentence)")
+        examples.extend(cleaned_generated[: 3 - len(examples)])
+        return examples[:3]
 
     return cleaned_generated[:3]

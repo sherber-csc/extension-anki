@@ -7,12 +7,25 @@ const PROTOCOL = Object.freeze({
     "message",
     "processed_count",
     "success_count",
-    "failed_count"
+    "failed_count",
+    "record_id",
+    "word_key",
+    "error_message"
   ],
   "generatePendingResponseStatuses": [
-    "ok",
-    "partial_failure",
-    "no_pending_items"
+    "no_pending_items",
+    "processed_one_success",
+    "processed_one_failed"
+  ],
+  "generationPreflightEndpoint": "/generation-preflight",
+  "generationPreflightFields": [
+    "status",
+    "summary",
+    "checks"
+  ],
+  "generationPreflightStatuses": [
+    "ready",
+    "not_ready"
   ],
   "optionalFields": [
     "source_sentence",
@@ -72,8 +85,11 @@ const PROTOCOL = Object.freeze({
 export const CAPTURE_ENDPOINT = PROTOCOL.captureEndpoint;
 export const QUEUE_ENDPOINT = PROTOCOL.queueEndpoint;
 export const GENERATE_PENDING_ENDPOINT = PROTOCOL.generatePendingEndpoint;
+export const GENERATION_PREFLIGHT_ENDPOINT = PROTOCOL.generationPreflightEndpoint;
 export const GENERATE_PENDING_RESPONSE_FIELDS = Object.freeze(PROTOCOL.generatePendingResponseFields);
 export const GENERATE_PENDING_RESPONSE_STATUSES = Object.freeze(PROTOCOL.generatePendingResponseStatuses);
+export const GENERATION_PREFLIGHT_FIELDS = Object.freeze(PROTOCOL.generationPreflightFields);
+export const GENERATION_PREFLIGHT_STATUSES = Object.freeze(PROTOCOL.generationPreflightStatuses);
 export const REQUEST_FIELDS = Object.freeze(PROTOCOL.requestFields);
 export const REQUIRED_FIELDS = Object.freeze(PROTOCOL.requiredFields);
 export const OPTIONAL_FIELDS = Object.freeze(PROTOCOL.optionalFields);

@@ -28,6 +28,9 @@ class QueueManager:
     def list_recent(self, *, limit: int) -> list[QueueRecord]:
         return self.repository.list_recent(limit=limit)
 
+    def get_oldest_pending(self) -> QueueRecord | None:
+        return self.repository.get_oldest_pending()
+
     def list_by_status(self, *, status: str, limit: int | None = None) -> list[QueueRecord]:
         return self.repository.list_by_status(status=status, limit=limit)
 

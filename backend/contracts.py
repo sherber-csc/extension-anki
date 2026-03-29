@@ -57,11 +57,12 @@ QUEUE_STATUSES: Final[tuple[str, ...]] = (
 CAPTURE_ENDPOINT: Final[str] = "/api/captures"
 QUEUE_ENDPOINT: Final[str] = "/queue"
 GENERATE_PENDING_ENDPOINT: Final[str] = "/generate-pending"
+GENERATION_PREFLIGHT_ENDPOINT: Final[str] = "/generation-preflight"
 
 GENERATE_PENDING_RESPONSE_STATUSES: Final[tuple[str, ...]] = (
-    "ok",
-    "partial_failure",
     "no_pending_items",
+    "processed_one_success",
+    "processed_one_failed",
 )
 
 GENERATE_PENDING_RESPONSE_FIELDS: Final[tuple[str, ...]] = (
@@ -70,6 +71,20 @@ GENERATE_PENDING_RESPONSE_FIELDS: Final[tuple[str, ...]] = (
     "processed_count",
     "success_count",
     "failed_count",
+    "record_id",
+    "word_key",
+    "error_message",
+)
+
+GENERATION_PREFLIGHT_STATUSES: Final[tuple[str, ...]] = (
+    "ready",
+    "not_ready",
+)
+
+GENERATION_PREFLIGHT_FIELDS: Final[tuple[str, ...]] = (
+    "status",
+    "summary",
+    "checks",
 )
 
 RESPONSE_STATUS_TEXTS: Final[dict[str, str]] = {
@@ -85,8 +100,11 @@ EXTENSION_PROTOCOL_SNAPSHOT: Final[dict[str, object]] = {
     "captureEndpoint": CAPTURE_ENDPOINT,
     "queueEndpoint": QUEUE_ENDPOINT,
     "generatePendingEndpoint": GENERATE_PENDING_ENDPOINT,
+    "generationPreflightEndpoint": GENERATION_PREFLIGHT_ENDPOINT,
     "generatePendingResponseFields": list(GENERATE_PENDING_RESPONSE_FIELDS),
     "generatePendingResponseStatuses": list(GENERATE_PENDING_RESPONSE_STATUSES),
+    "generationPreflightFields": list(GENERATION_PREFLIGHT_FIELDS),
+    "generationPreflightStatuses": list(GENERATION_PREFLIGHT_STATUSES),
     "requestFields": list(CAPTURE_REQUEST_FIELDS),
     "requiredFields": list(CAPTURE_REQUIRED_FIELDS),
     "optionalFields": list(CAPTURE_OPTIONAL_FIELDS),
@@ -113,8 +131,11 @@ def render_extension_protocol_js() -> str:
             "export const CAPTURE_ENDPOINT = PROTOCOL.captureEndpoint;",
             "export const QUEUE_ENDPOINT = PROTOCOL.queueEndpoint;",
             "export const GENERATE_PENDING_ENDPOINT = PROTOCOL.generatePendingEndpoint;",
+            "export const GENERATION_PREFLIGHT_ENDPOINT = PROTOCOL.generationPreflightEndpoint;",
             "export const GENERATE_PENDING_RESPONSE_FIELDS = Object.freeze(PROTOCOL.generatePendingResponseFields);",
             "export const GENERATE_PENDING_RESPONSE_STATUSES = Object.freeze(PROTOCOL.generatePendingResponseStatuses);",
+            "export const GENERATION_PREFLIGHT_FIELDS = Object.freeze(PROTOCOL.generationPreflightFields);",
+            "export const GENERATION_PREFLIGHT_STATUSES = Object.freeze(PROTOCOL.generationPreflightStatuses);",
             "export const REQUEST_FIELDS = Object.freeze(PROTOCOL.requestFields);",
             "export const REQUIRED_FIELDS = Object.freeze(PROTOCOL.requiredFields);",
             "export const OPTIONAL_FIELDS = Object.freeze(PROTOCOL.optionalFields);",
