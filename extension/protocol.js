@@ -8,6 +8,7 @@ const PROTOCOL = Object.freeze({
     "source_timestamp",
     "captured_at"
   ],
+  "queueEndpoint": "/queue",
   "queueStatuses": [
     "pending",
     "success",
@@ -56,6 +57,7 @@ const PROTOCOL = Object.freeze({
 });
 
 export const CAPTURE_ENDPOINT = PROTOCOL.captureEndpoint;
+export const QUEUE_ENDPOINT = PROTOCOL.queueEndpoint;
 export const REQUEST_FIELDS = Object.freeze(PROTOCOL.requestFields);
 export const REQUIRED_FIELDS = Object.freeze(PROTOCOL.requiredFields);
 export const OPTIONAL_FIELDS = Object.freeze(PROTOCOL.optionalFields);

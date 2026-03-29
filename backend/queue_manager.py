@@ -24,3 +24,6 @@ class QueueManager:
             lemma_result,
             generator_version=self.generator_version,
         )
+
+    def list_recent(self, *, limit: int) -> list[QueueRecord]:
+        return self.repository.list_recent(limit=limit)

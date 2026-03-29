@@ -10,7 +10,7 @@ from backend.anki_client import AnkiConnectClient
 from backend.anki_service import AnkiService
 from backend.capture_service import CaptureService
 from backend.config import AppConfig, DEFAULT_CONFIG
-from backend.contracts import RESPONSE_STATUS_TEXTS
+from backend.contracts import QUEUE_ENDPOINT, RESPONSE_STATUS_TEXTS
 from backend.lemmatizer import lemmatize_word
 from backend.normalization import normalize_surface_form
 from backend.queue_manager import QueueManager
@@ -22,6 +22,7 @@ from backend.storage import SQLiteStorage
 class AppContext:
     config: AppConfig
     capture_service: CaptureService
+    queue_manager: QueueManager
 
 
 def build_app_context(config: AppConfig = DEFAULT_CONFIG) -> AppContext:
@@ -39,16 +40,36 @@ def build_app_context(config: AppConfig = DEFAULT_CONFIG) -> AppContext:
         normalize_surface_form=normalize_surface_form,
         lemmatize_word=lemmatize_word,
     )
-    return AppContext(config=config, capture_service=capture_service)
+    return AppContext(
+        config=config,
+        capture_service=capture_service,
+        queue_manager=queue_manager,
+    )
 
 
 def create_handler(context: AppContext):
     class RequestHandler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
-            if self.path != context.config.health_endpoint:
-                self._send_json(HTTPStatus.NOT_FOUND, {"status": "not_found"})
+            if self.path == context.config.health_endpoint:
+                self._send_json(HTTPStatus.OK, {"status": "ok"})
                 return
-            self._send_json(HTTPStatus.OK, {"status": "ok"})
+
+            if self.path == QUEUE_ENDPOINT:
+                items = [
+                    {
+                        "record_id": record.record_id,
+                        "surface_form": record.surface_form,
+                        "lemma": record.lemma,
+                        "word_key": record.word_key,
+                        "status": record.status,
+                        "captured_at": record.captured_at,
+                    }
+                    for record in context.queue_manager.list_recent(limit=50)
+                ]
+                self._send_json(HTTPStatus.OK, {"items": items})
+                return
+
+            self._send_json(HTTPStatus.NOT_FOUND, {"status": "not_found"})
 
         def do_POST(self) -> None:  # noqa: N802
             if self.path != context.config.capture_endpoint:
