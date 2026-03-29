@@ -63,6 +63,14 @@ async function captureActiveSelection(activeTabOverride) {
     ...payload,
     source_type: detectSourceType(activeTab.url),
   };
+
+  console.debug("[Sherber][background-capture-debug]", {
+    surface_form: requestPayload.surface_form,
+    source_sentence: requestPayload.source_sentence,
+    source_type: requestPayload.source_type,
+    source_url: requestPayload.source_url,
+  });
+
   const response = await captureSelection(BACKEND_BASE_URL, requestPayload);
   await showNotification(response.status, response.message);
 }
@@ -74,7 +82,7 @@ function registerCaptureContextMenu() {
       {
         id: CAPTURE_CONTEXT_MENU_ID,
         title: CAPTURE_CONTEXT_MENU_TITLE,
-        contexts: ["selection"],
+        contexts: ["selection", "page"],
       },
       () => {
         void chrome.runtime.lastError;
