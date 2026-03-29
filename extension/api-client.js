@@ -54,7 +54,7 @@ export async function fetchQueue(baseUrl) {
   });
 
   if (!response.ok) {
-    throw new Error(`Queue request failed with status ${response.status}.`);
+    throw new Error(`Queue request failed with status ${response.status} at ${QUEUE_ENDPOINT}.`);
   }
 
   return await response.json();

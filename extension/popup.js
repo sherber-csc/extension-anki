@@ -13,17 +13,20 @@ loadQueue();
 
 async function loadQueue() {
   refreshButton.disabled = true;
-  statusElement.textContent = "Loading...";
+  refreshButton.textContent = "Loading...";
+  statusElement.textContent = "Loading queue...";
   pendingListElement.textContent = "";
 
   try {
     const payload = await fetchQueue(backendBaseUrl);
     renderPendingItems(Array.isArray(payload.items) ? payload.items : []);
-  } catch (_error) {
-    statusElement.textContent = "Failed to load queue.";
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error.";
+    statusElement.textContent = `Failed to load queue: ${message}`;
     pendingListElement.innerHTML = '<div class="empty">No data available.</div>';
   } finally {
     refreshButton.disabled = false;
+    refreshButton.textContent = "Refresh";
   }
 }
 

@@ -34,7 +34,7 @@ async function captureActiveSelection() {
   try {
     payload = await chrome.tabs.sendMessage(activeTab.id, { type: "collect-selection" });
   } catch (error) {
-    await showNotification(undefined, String(error));
+    await showNotification(undefined, formatContentScriptError(error));
     return;
   }
 
@@ -61,4 +61,12 @@ function detectSourceType(url) {
     return YOUTUBE_SOURCE_TYPE;
   }
   return WEB_SOURCE_TYPE;
+}
+
+function formatContentScriptError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes("Receiving end does not exist")) {
+    return "当前网页未连接扩展采集脚本，请刷新当前网页后重试。";
+  }
+  return message;
 }

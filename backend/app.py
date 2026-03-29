@@ -117,6 +117,7 @@ def create_handler(context: AppContext):
 def run_server(config: AppConfig = DEFAULT_CONFIG) -> None:
     context = build_app_context(config)
     server = ThreadingHTTPServer((config.backend_host, config.backend_port), create_handler(context))
+    print(f"Backend listening on http://{config.backend_host}:{config.backend_port}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
