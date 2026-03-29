@@ -10,89 +10,7 @@ from backend.anki_client import AnkiConnectClient
 from backend.config import AppConfig, DEFAULT_CONFIG
 from backend.note_fields import NOTE_TYPE_FIELDS
 from backend.schemas import PreflightCheckResult
-
-_NOTE_TYPE_CSS = """
-.card {
-  font-family: Arial, sans-serif;
-  font-size: 18px;
-  text-align: left;
-  color: #222;
-  background: white;
-}
-
-.front {
-  text-align: center;
-}
-
-.front .emoji {
-  font-size: 48px;
-  margin-bottom: 12px;
-}
-
-.front .word {
-  font-size: 36px;
-  font-weight: bold;
-  margin-bottom: 12px;
-}
-
-.front .ipa {
-  font-size: 22px;
-  color: #666;
-  margin-bottom: 12px;
-}
-
-.front .image-prompt {
-  font-size: 16px;
-  color: #555;
-}
-
-.section {
-  margin-bottom: 20px;
-}
-
-.section-title {
-  font-weight: bold;
-  margin-bottom: 8px;
-}
-
-.forms {
-  color: #666;
-}
-""".strip()
-
-_CARD_TEMPLATES = [
-    {
-        "Name": "Card 1",
-        "Front": """
-<div class="front">
-  <div class="emoji">{{emoji}}</div>
-  <div class="word">{{word}}</div>
-  {{#audio}}<div>[sound:{{audio}}]</div>{{/audio}}
-  <div class="ipa">{{ipa}}</div>
-  <div class="image-prompt">{{image_prompt}}</div>
-</div>
-""".strip(),
-        "Back": """
-{{FrontSide}}
-<hr id=answer>
-<div class="section">
-  <div class="section-title">Meaning</div>
-  <div>{{meanings}}</div>
-</div>
-{{#forms}}
-<div class="section forms">Forms: {{forms}}</div>
-{{/forms}}
-<div class="section">
-  <div class="section-title">Pair</div>
-  <div>{{pairs}}</div>
-</div>
-<div class="section">
-  <div class="section-title">Example</div>
-  <div>{{examples}}</div>
-</div>
-""".strip(),
-    }
-]
+from backend.note_type_templates import CARD_TEMPLATES, NOTE_TYPE_CSS
 
 
 class AnkiService:
@@ -187,8 +105,8 @@ class AnkiService:
             self.client.create_model(
                 model_name=self.config.default_note_type_name,
                 in_order_fields=list(NOTE_TYPE_FIELDS),
-                css=_NOTE_TYPE_CSS,
-                card_templates=_CARD_TEMPLATES,
+                css=NOTE_TYPE_CSS,
+                card_templates=CARD_TEMPLATES,
             )
             return
 

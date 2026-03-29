@@ -12,6 +12,12 @@ from backend.schemas import GeneratedNoteContent, PreflightCheckResult
 
 logger = logging.getLogger(__name__)
 
+_POS_TOKEN_PATTERN = r"[a-z][a-z_-]*"
+_MEANING_ITEM_PATTERN = re.compile(rf"^\(({_POS_TOKEN_PATTERN})\)\s+(.+)$")
+_PAIR_ITEM_PATTERN = re.compile(r"^(.+?)\s+\(([^()]+)\)$")
+_SOURCE_SENTENCE_META_PATTERN = re.compile(rf"^\(source sentence\)\s+\(({_POS_TOKEN_PATTERN})\)$")
+_EXAMPLE_WITH_POS_PATTERN = re.compile(rf"^(.+?)\s+\(({_POS_TOKEN_PATTERN})\)$")
+
 SYSTEM_PROMPT = """You generate structured vocabulary card content for a single English word.
 Return only one strict JSON object with these keys:
 - word: string
@@ -24,8 +30,18 @@ Return only one strict JSON object with these keys:
 
 Rules:
 - meanings must be English-only and concise.
-- pairs must be concise useful collocations.
-- examples must contain exactly 3 generated example sentences.
+- every meanings item must use this exact format: "(<pos>) <meaning>"
+- use lowercase part-of-speech tags such as noun, verb, adjective, adverb.
+- pairs must contain exactly 3 useful collocations.
+- every pairs item must use this exact format: "<english> (<zh>)"
+- use ASCII parentheses () for part-of-speech tags and Chinese glosses.
+- examples must contain exactly 3 items.
+- if source_sentence is provided:
+  - examples[0] must be exactly "(source sentence) (<pos>)"
+  - examples[1] and examples[2] must each use this exact format: "<sentence> (<pos>)"
+  - do not copy the source sentence text into examples[0]; the backend will prepend it.
+- if source_sentence is not provided:
+  - all three examples items must each use this exact format: "<sentence> (<pos>)"
 - Do not wrap the JSON in markdown fences.
 - Do not include any keys beyond the required keys.
 """
@@ -98,7 +114,10 @@ class LLMClient:
 
         content_text = self._extract_content_text(payload)
         data = self._parse_response_json(content_text)
-        return self._validate_generated_content(data)
+        return self._validate_generated_content(
+            data,
+            has_source_sentence=bool(str(source_sentence or "").strip()),
+        )
 
     def _ensure_runtime_config(self) -> None:
         missing_fields: list[str] = []
@@ -155,7 +174,12 @@ class LLMClient:
                 f"word: {word}",
                 f"source_sentence: {source_line or '(none)'}",
                 "Use the source sentence only as context for sense disambiguation.",
-                "Do not copy the source sentence into the examples array.",
+                "meanings items must be formatted as '(<pos>) <meaning>'.",
+                "pairs must contain exactly 3 items formatted as '<english> (<zh>)'.",
+                "If source_sentence is present, examples[0] must be exactly '(source sentence) (<pos>)'.",
+                "If source_sentence is present, examples[1] and examples[2] must be '<sentence> (<pos>)'.",
+                "If source_sentence is absent, all three examples items must be '<sentence> (<pos>)'.",
+                "Do not copy the source sentence text into examples[0]; the backend will prepend it.",
             )
         )
 
@@ -205,7 +229,11 @@ class LLMClient:
                 ) from nested_exc
 
     @staticmethod
-    def _validate_generated_content(data: dict) -> GeneratedNoteContent:
+    def _validate_generated_content(
+        data: dict,
+        *,
+        has_source_sentence: bool,
+    ) -> GeneratedNoteContent:
         required_string_fields = ("word", "ipa", "emoji", "image_prompt")
         required_list_fields = ("meanings", "pairs", "examples")
 
@@ -223,8 +251,9 @@ class LLMClient:
         pairs = [str(item).strip() for item in data["pairs"] if str(item).strip()]
         examples = [str(item).strip() for item in data["examples"] if str(item).strip()]
 
-        if len(examples) < 3:
-            raise RuntimeError("llm response invalid: examples must contain at least 3 items")
+        _validate_meanings(meanings)
+        _validate_pairs(pairs)
+        _validate_examples(examples, has_source_sentence=has_source_sentence)
 
         return GeneratedNoteContent(
             word=str(data["word"]).strip(),
@@ -343,3 +372,51 @@ def _extract_first_json_object(text: str) -> str:
         raise ValueError("multiple JSON values detected")
 
     return candidate
+
+
+def _validate_meanings(meanings: list[str]) -> None:
+    for index, item in enumerate(meanings):
+        if _MEANING_ITEM_PATTERN.match(item) is None:
+            raise RuntimeError(
+                f"llm response invalid: meanings[{index}] must match '(<pos>) <meaning>'"
+            )
+
+
+def _validate_pairs(pairs: list[str]) -> None:
+    if len(pairs) != 3:
+        raise RuntimeError("llm response invalid: pairs must contain exactly 3 items")
+
+    for index, item in enumerate(pairs):
+        if _PAIR_ITEM_PATTERN.match(item) is None:
+            raise RuntimeError(
+                f"llm response invalid: pairs[{index}] must match '<english> (<zh>)'"
+            )
+
+
+def _validate_examples(examples: list[str], *, has_source_sentence: bool) -> None:
+    if len(examples) != 3:
+        raise RuntimeError("llm response invalid: examples must contain exactly 3 items")
+
+    if has_source_sentence:
+        if _SOURCE_SENTENCE_META_PATTERN.match(examples[0]) is None:
+            raise RuntimeError(
+                "llm response invalid: examples[0] must match '(source sentence) (<pos>)'"
+            )
+        for index in (1, 2):
+            if (
+                _EXAMPLE_WITH_POS_PATTERN.match(examples[index]) is None
+                or examples[index].strip().lower().startswith("(source sentence)")
+            ):
+                raise RuntimeError(
+                    f"llm response invalid: examples[{index}] must match '<sentence> (<pos>)'"
+                )
+        return
+
+    for index, item in enumerate(examples):
+        if (
+            _EXAMPLE_WITH_POS_PATTERN.match(item) is None
+            or item.strip().lower().startswith("(source sentence)")
+        ):
+            raise RuntimeError(
+                f"llm response invalid: examples[{index}] must match '<sentence> (<pos>)'"
+            )

@@ -10,6 +10,7 @@ class ExampleBuilderTestCase(unittest.TestCase):
         examples = build_examples(
             "Please retry the download if it doesn't start automatically.",
             [
+                "(source sentence) (verb)",
                 "I retried the task after fixing the error. (verb)",
                 "You can retry the operation later. (verb)",
                 "She will retry the process tomorrow. (verb)",
@@ -18,7 +19,7 @@ class ExampleBuilderTestCase(unittest.TestCase):
 
         self.assertEqual(
             [
-                "Please retry the download if it doesn't start automatically. (source sentence)",
+                "Please retry the download if it doesn't start automatically. (source sentence) (verb)",
                 "I retried the task after fixing the error. (verb)",
                 "You can retry the operation later. (verb)",
             ],
@@ -48,6 +49,34 @@ class ExampleBuilderTestCase(unittest.TestCase):
     def test_requires_three_generated_examples_without_source_sentence(self) -> None:
         with self.assertRaises(ValueError):
             build_examples(None, ["Only one example."])
+
+    def test_requires_source_sentence_meta_when_source_sentence_present(self) -> None:
+        with self.assertRaisesRegex(
+            ValueError,
+            r"generated_examples\[0\] must match '\(source sentence\) \(<pos>\)'",
+        ):
+            build_examples(
+                "Please retry the download if it doesn't start automatically.",
+                [
+                    "Please retry the download if it doesn't start automatically. (verb)",
+                    "I retried the task after fixing the error. (verb)",
+                    "You can retry the operation later. (verb)",
+                ],
+            )
+
+    def test_requires_pos_suffix_without_source_sentence(self) -> None:
+        with self.assertRaisesRegex(
+            ValueError,
+            r"generated_examples\[1\] must match '<sentence> \(<pos>\)'",
+        ):
+            build_examples(
+                None,
+                [
+                    "I retried the task after fixing the error. (verb)",
+                    "You can retry the operation later.",
+                    "She will retry the process tomorrow. (verb)",
+                ],
+            )
 
 
 if __name__ == "__main__":

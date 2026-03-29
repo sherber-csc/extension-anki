@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from backend.anki_service import AnkiService
+from backend.note_type_templates import CARD_TEMPLATES, NOTE_TYPE_CSS
 from backend.schemas import PreflightCheckResult
 
 
@@ -63,6 +64,25 @@ class FakeAnkiConnectClient:
 
 
 class AnkiServiceSetupTestCase(unittest.TestCase):
+    def test_note_type_templates_match_display_structure_contract(self) -> None:
+        front_template = CARD_TEMPLATES[0]["Front"]
+        back_template = CARD_TEMPLATES[0]["Back"]
+
+        self.assertIn('<div class="word">{{word}}</div>', front_template)
+        self.assertIn('<div class="image-prompt">💡 Imagine: {{image_prompt}}</div>', front_template)
+        self.assertNotIn("{{FrontSide}}", back_template)
+        self.assertIn('<div class="meanings">{{meanings}}</div>', back_template)
+        self.assertNotIn("forms-inline", back_template)
+        self.assertNotIn("{{{", back_template)
+        self.assertIn('<ul class="pair-list">{{pairs}}</ul>', back_template)
+        self.assertIn('<ul class="example-list">{{examples}}</ul>', back_template)
+        self.assertIn('.meaning-pos', NOTE_TYPE_CSS)
+        self.assertIn('.meaning-text', NOTE_TYPE_CSS)
+        self.assertIn('.forms-label', NOTE_TYPE_CSS)
+        self.assertIn('.forms-value', NOTE_TYPE_CSS)
+        self.assertIn('.pair-zh', NOTE_TYPE_CSS)
+        self.assertIn('.example-meta', NOTE_TYPE_CSS)
+
     def test_check_collection_setup_reports_missing_note_type(self) -> None:
         client = FakeAnkiConnectClient(
             decks=["sherber"],
@@ -98,6 +118,8 @@ class AnkiServiceSetupTestCase(unittest.TestCase):
         self.assertEqual(["sherber"], client.created_decks)
         self.assertEqual(1, len(client.created_models))
         self.assertEqual("SherberVocabNote", client.created_models[0]["model_name"])
+        self.assertEqual(NOTE_TYPE_CSS, client.created_models[0]["css"])
+        self.assertEqual(CARD_TEMPLATES, client.created_models[0]["card_templates"])
 
     def test_ensure_collection_setup_is_idempotent_when_setup_matches(self) -> None:
         client = FakeAnkiConnectClient(
@@ -144,6 +166,38 @@ class AnkiServiceSetupTestCase(unittest.TestCase):
             service.ensure_collection_setup()
 
         self.assertIn("fields mismatch", str(context.exception))
+
+    def test_ensure_collection_setup_does_not_recreate_existing_matching_model(self) -> None:
+        client = FakeAnkiConnectClient(
+            decks=["sherber"],
+            models=["SherberVocabNote"],
+            model_fields={
+                "SherberVocabNote": [
+                    "word",
+                    "ipa",
+                    "emoji",
+                    "audio",
+                    "image_prompt",
+                    "meanings",
+                    "pairs",
+                    "examples",
+                    "forms",
+                    "record_id",
+                    "word_key",
+                    "lemma",
+                    "surface_form",
+                    "source_url",
+                    "source_type",
+                    "source_timestamp",
+                    "generator_version",
+                ]
+            },
+        )
+        service = AnkiService(client)
+
+        service.ensure_collection_setup()
+
+        self.assertEqual([], client.created_models)
 
 
 if __name__ == "__main__":
