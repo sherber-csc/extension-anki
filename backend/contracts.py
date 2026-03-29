@@ -76,6 +76,18 @@ GENERATE_PENDING_RESPONSE_FIELDS: Final[tuple[str, ...]] = (
     "error_message",
 )
 
+DELETE_PENDING_RESPONSE_STATUSES: Final[tuple[str, ...]] = (
+    "deleted_pending_item",
+    "pending_record_not_found",
+    "delete_not_allowed",
+)
+
+DELETE_PENDING_RESPONSE_FIELDS: Final[tuple[str, ...]] = (
+    "status",
+    "message",
+    "record_id",
+)
+
 GENERATION_PREFLIGHT_STATUSES: Final[tuple[str, ...]] = (
     "ready",
     "not_ready",
@@ -94,6 +106,9 @@ RESPONSE_STATUS_TEXTS: Final[dict[str, str]] = {
     "invalid_input": "当前仅支持单词",
     "backend_unavailable": "本地后端不可用",
     "processing_failed": "采集失败",
+    "deleted_pending_item": "Deleted one pending record.",
+    "pending_record_not_found": "Pending record not found.",
+    "delete_not_allowed": "Delete is only allowed for pending records.",
 }
 
 EXTENSION_PROTOCOL_SNAPSHOT: Final[dict[str, object]] = {
@@ -101,6 +116,8 @@ EXTENSION_PROTOCOL_SNAPSHOT: Final[dict[str, object]] = {
     "queueEndpoint": QUEUE_ENDPOINT,
     "generatePendingEndpoint": GENERATE_PENDING_ENDPOINT,
     "generationPreflightEndpoint": GENERATION_PREFLIGHT_ENDPOINT,
+    "deletePendingResponseFields": list(DELETE_PENDING_RESPONSE_FIELDS),
+    "deletePendingResponseStatuses": list(DELETE_PENDING_RESPONSE_STATUSES),
     "generatePendingResponseFields": list(GENERATE_PENDING_RESPONSE_FIELDS),
     "generatePendingResponseStatuses": list(GENERATE_PENDING_RESPONSE_STATUSES),
     "generationPreflightFields": list(GENERATION_PREFLIGHT_FIELDS),
@@ -132,6 +149,8 @@ def render_extension_protocol_js() -> str:
             "export const QUEUE_ENDPOINT = PROTOCOL.queueEndpoint;",
             "export const GENERATE_PENDING_ENDPOINT = PROTOCOL.generatePendingEndpoint;",
             "export const GENERATION_PREFLIGHT_ENDPOINT = PROTOCOL.generationPreflightEndpoint;",
+            "export const DELETE_PENDING_RESPONSE_FIELDS = Object.freeze(PROTOCOL.deletePendingResponseFields);",
+            "export const DELETE_PENDING_RESPONSE_STATUSES = Object.freeze(PROTOCOL.deletePendingResponseStatuses);",
             "export const GENERATE_PENDING_RESPONSE_FIELDS = Object.freeze(PROTOCOL.generatePendingResponseFields);",
             "export const GENERATE_PENDING_RESPONSE_STATUSES = Object.freeze(PROTOCOL.generatePendingResponseStatuses);",
             "export const GENERATION_PREFLIGHT_FIELDS = Object.freeze(PROTOCOL.generationPreflightFields);",

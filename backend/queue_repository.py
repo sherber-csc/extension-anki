@@ -200,3 +200,30 @@ class QueueRepository:
                 """,
                 (status, error_message, record_id),
             )
+
+    def delete_pending(self, record_id: int) -> str:
+        with self.storage.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT status
+                FROM queue_records
+                WHERE record_id = ?
+                """,
+                (record_id,),
+            ).fetchone()
+
+            if row is None:
+                return "pending_record_not_found"
+
+            if row["status"] != "pending":
+                return "delete_not_allowed"
+
+            connection.execute(
+                """
+                DELETE FROM queue_records
+                WHERE record_id = ?
+                """,
+                (record_id,),
+            )
+
+        return "deleted_pending_item"

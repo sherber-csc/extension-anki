@@ -36,3 +36,6 @@ class QueueManager:
 
     def update_status(self, *, record_id: int, status: str, error_message: str) -> None:
         self.repository.update_status(record_id=record_id, status=status, error_message=error_message)
+
+    def delete_pending(self, record_id: int) -> str:
+        return self.repository.delete_pending(record_id)

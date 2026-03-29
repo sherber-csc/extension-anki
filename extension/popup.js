@@ -1,4 +1,4 @@
-import { fetchQueue, generatePending, resolveBackendBaseUrl } from "./api-client.js";
+import { deletePendingRecord, fetchQueue, generatePending, resolveBackendBaseUrl } from "./api-client.js";
 
 const backendBaseUrl = resolveBackendBaseUrl();
 const refreshButton = document.getElementById("refresh-button");
@@ -52,9 +52,24 @@ function renderPendingItems(items) {
     const itemElement = document.createElement("div");
     itemElement.className = "queue-item";
 
+    const headerElement = document.createElement("div");
+    headerElement.className = "queue-item-header";
+
     const titleElement = document.createElement("strong");
+    titleElement.className = "queue-item-title";
     titleElement.textContent = item.surface_form;
-    itemElement.appendChild(titleElement);
+    headerElement.appendChild(titleElement);
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "delete-button";
+    deleteButton.textContent = "Delete";
+    deleteButton.addEventListener("click", async () => {
+      await handleDeletePending(item.record_id, deleteButton);
+    });
+    headerElement.appendChild(deleteButton);
+
+    itemElement.appendChild(headerElement);
 
     itemElement.appendChild(createLine(`lemma: ${item.lemma}`));
     itemElement.appendChild(createLine(`word_key: ${item.word_key}`));
@@ -68,6 +83,29 @@ function createLine(text) {
   const line = document.createElement("div");
   line.textContent = text;
   return line;
+}
+
+async function handleDeletePending(recordId, buttonElement) {
+  buttonElement.disabled = true;
+  buttonElement.textContent = "Deleting...";
+  actionMessageElement.textContent = `Deleting pending record ${recordId}...`;
+
+  try {
+    const result = await deletePendingRecord(backendBaseUrl, recordId);
+    if (result.status === "deleted_pending_item") {
+      actionMessageElement.textContent = result.message || `Deleted pending record ${recordId}.`;
+      await loadQueue();
+      return;
+    }
+
+    actionMessageElement.textContent = `Delete failed: ${result.message || result.status}`;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error.";
+    actionMessageElement.textContent = `Delete failed: ${message}`;
+  } finally {
+    buttonElement.disabled = false;
+    buttonElement.textContent = "Delete";
+  }
 }
 
 async function handleGeneratePending() {

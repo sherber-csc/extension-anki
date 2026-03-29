@@ -147,6 +147,34 @@ def create_handler(context: AppContext):
                 response_payload["message"] = RESPONSE_STATUS_TEXTS.get(response.status)
             self._send_json(status_code, response_payload)
 
+        def do_DELETE(self) -> None:  # noqa: N802
+            queue_prefix = f"{QUEUE_ENDPOINT}/"
+            if not self.path.startswith(queue_prefix):
+                self._send_json(HTTPStatus.NOT_FOUND, {"status": "not_found"})
+                return
+
+            record_id_text = self.path[len(queue_prefix):]
+            try:
+                record_id = int(record_id_text)
+            except ValueError:
+                self._send_json(HTTPStatus.NOT_FOUND, {"status": "not_found"})
+                return
+
+            status = context.queue_manager.delete_pending(record_id)
+            response_payload = {
+                "status": status,
+                "message": RESPONSE_STATUS_TEXTS.get(status, status),
+                "record_id": record_id,
+            }
+            if status == "deleted_pending_item":
+                self._send_json(HTTPStatus.OK, response_payload)
+                return
+            if status == "pending_record_not_found":
+                self._send_json(HTTPStatus.NOT_FOUND, response_payload)
+                return
+
+            self._send_json(HTTPStatus.CONFLICT, response_payload)
+
         def log_message(self, format: str, *args) -> None:  # noqa: A003
             return
 

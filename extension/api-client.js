@@ -76,3 +76,28 @@ export async function generatePending(baseUrl) {
 
   return await response.json();
 }
+
+export async function deletePendingRecord(baseUrl, recordId) {
+  if (!baseUrl) {
+    throw new Error(RESPONSE_STATUS_TEXTS[BACKEND_UNAVAILABLE] || "本地后端不可用");
+  }
+
+  const endpointUrl = `${baseUrl}${QUEUE_ENDPOINT}/${recordId}`;
+
+  try {
+    const response = await fetch(endpointUrl, {
+      method: "DELETE",
+    });
+
+    try {
+      return await response.json();
+    } catch {
+      throw new Error(`Delete request returned invalid JSON for record_id=${recordId}.`);
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Delete request failed for record_id=${recordId}.`);
+  }
+}

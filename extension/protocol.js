@@ -1,6 +1,16 @@
 // Generated from backend/contracts.py. Do not edit by hand.
 const PROTOCOL = Object.freeze({
   "captureEndpoint": "/api/captures",
+  "deletePendingResponseFields": [
+    "status",
+    "message",
+    "record_id"
+  ],
+  "deletePendingResponseStatuses": [
+    "deleted_pending_item",
+    "pending_record_not_found",
+    "delete_not_allowed"
+  ],
   "generatePendingEndpoint": "/generate-pending",
   "generatePendingResponseFields": [
     "status",
@@ -65,7 +75,10 @@ const PROTOCOL = Object.freeze({
     "already_in_anki": "该单词已存在于 Anki",
     "already_in_queue": "已在待处理队列中",
     "backend_unavailable": "本地后端不可用",
+    "delete_not_allowed": "Delete is only allowed for pending records.",
+    "deleted_pending_item": "Deleted one pending record.",
     "invalid_input": "当前仅支持单词",
+    "pending_record_not_found": "Pending record not found.",
     "processing_failed": "采集失败"
   },
   "responseStatuses": [
@@ -86,6 +99,8 @@ export const CAPTURE_ENDPOINT = PROTOCOL.captureEndpoint;
 export const QUEUE_ENDPOINT = PROTOCOL.queueEndpoint;
 export const GENERATE_PENDING_ENDPOINT = PROTOCOL.generatePendingEndpoint;
 export const GENERATION_PREFLIGHT_ENDPOINT = PROTOCOL.generationPreflightEndpoint;
+export const DELETE_PENDING_RESPONSE_FIELDS = Object.freeze(PROTOCOL.deletePendingResponseFields);
+export const DELETE_PENDING_RESPONSE_STATUSES = Object.freeze(PROTOCOL.deletePendingResponseStatuses);
 export const GENERATE_PENDING_RESPONSE_FIELDS = Object.freeze(PROTOCOL.generatePendingResponseFields);
 export const GENERATE_PENDING_RESPONSE_STATUSES = Object.freeze(PROTOCOL.generatePendingResponseStatuses);
 export const GENERATION_PREFLIGHT_FIELDS = Object.freeze(PROTOCOL.generationPreflightFields);
