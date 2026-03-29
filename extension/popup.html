@@ -15,8 +15,9 @@
 
       header {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
         margin-bottom: 12px;
       }
 
@@ -37,6 +38,21 @@
       button {
         padding: 4px 8px;
         font-size: 12px;
+        min-height: 32px;
+      }
+
+      .header-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .header-actions button {
+        width: 100%;
+      }
+
+      #generate-all-button {
+        grid-column: 1 / -1;
       }
 
       #status {
@@ -78,7 +94,8 @@
   <body>
     <header>
       <h1>Queue</h1>
-      <div>
+      <div class="header-actions">
+        <button id="generate-all-button" type="button">Generate all pending cards</button>
         <button id="generate-button" type="button">Generate pending cards</button>
         <button id="refresh-button" type="button">Refresh</button>
       </div>

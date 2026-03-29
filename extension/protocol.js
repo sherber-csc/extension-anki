@@ -11,6 +11,19 @@ const PROTOCOL = Object.freeze({
     "pending_record_not_found",
     "delete_not_allowed"
   ],
+  "generateAllPendingEndpoint": "/generate-all-pending",
+  "generateAllPendingResponseFields": [
+    "status",
+    "message",
+    "processed_count",
+    "success_count",
+    "failed_count"
+  ],
+  "generateAllPendingResponseStatuses": [
+    "no_pending_items",
+    "processed_all_success",
+    "processed_all_with_failures"
+  ],
   "generatePendingEndpoint": "/generate-pending",
   "generatePendingResponseFields": [
     "status",
@@ -97,6 +110,9 @@ const PROTOCOL = Object.freeze({
 
 export const CAPTURE_ENDPOINT = PROTOCOL.captureEndpoint;
 export const QUEUE_ENDPOINT = PROTOCOL.queueEndpoint;
+export const GENERATE_ALL_PENDING_ENDPOINT = PROTOCOL.generateAllPendingEndpoint;
+export const GENERATE_ALL_PENDING_RESPONSE_FIELDS = Object.freeze(PROTOCOL.generateAllPendingResponseFields);
+export const GENERATE_ALL_PENDING_RESPONSE_STATUSES = Object.freeze(PROTOCOL.generateAllPendingResponseStatuses);
 export const GENERATE_PENDING_ENDPOINT = PROTOCOL.generatePendingEndpoint;
 export const GENERATION_PREFLIGHT_ENDPOINT = PROTOCOL.generationPreflightEndpoint;
 export const DELETE_PENDING_RESPONSE_FIELDS = Object.freeze(PROTOCOL.deletePendingResponseFields);

@@ -1,4 +1,10 @@
-import { CAPTURE_ENDPOINT, GENERATE_PENDING_ENDPOINT, QUEUE_ENDPOINT, RESPONSE_STATUS_TEXTS } from "./protocol.js";
+import {
+  CAPTURE_ENDPOINT,
+  GENERATE_ALL_PENDING_ENDPOINT,
+  GENERATE_PENDING_ENDPOINT,
+  QUEUE_ENDPOINT,
+  RESPONSE_STATUS_TEXTS,
+} from "./protocol.js";
 
 const BACKEND_UNAVAILABLE = "backend_unavailable";
 
@@ -72,6 +78,23 @@ export async function generatePending(baseUrl) {
 
   if (!response.ok) {
     throw new Error(`Generate request failed with status ${response.status} at ${GENERATE_PENDING_ENDPOINT}.`);
+  }
+
+  return await response.json();
+}
+
+export async function generateAllPending(baseUrl) {
+  if (!baseUrl) {
+    throw new Error(RESPONSE_STATUS_TEXTS[BACKEND_UNAVAILABLE] || "本地后端不可用");
+  }
+
+  const endpointUrl = `${baseUrl}${GENERATE_ALL_PENDING_ENDPOINT}`;
+  const response = await fetch(endpointUrl, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Generate-all request failed with status ${response.status} at ${GENERATE_ALL_PENDING_ENDPOINT}.`);
   }
 
   return await response.json();

@@ -1,8 +1,9 @@
-import { deletePendingRecord, fetchQueue, generatePending, resolveBackendBaseUrl } from "./api-client.js";
+import { deletePendingRecord, fetchQueue, generateAllPending, generatePending, resolveBackendBaseUrl } from "./api-client.js";
 
 const backendBaseUrl = resolveBackendBaseUrl();
 const refreshButton = document.getElementById("refresh-button");
 const generateButton = document.getElementById("generate-button");
+const generateAllButton = document.getElementById("generate-all-button");
 const statusElement = document.getElementById("status");
 const actionMessageElement = document.getElementById("action-message");
 const pendingListElement = document.getElementById("pending-list");
@@ -15,11 +16,16 @@ generateButton.addEventListener("click", async () => {
   await handleGeneratePending();
 });
 
+generateAllButton.addEventListener("click", async () => {
+  await handleGenerateAllPending();
+});
+
 loadQueue();
 
 async function loadQueue() {
   refreshButton.disabled = true;
   generateButton.disabled = true;
+  generateAllButton.disabled = true;
   refreshButton.textContent = "Loading...";
   statusElement.textContent = "Loading queue...";
   pendingListElement.textContent = "";
@@ -34,6 +40,7 @@ async function loadQueue() {
   } finally {
     refreshButton.disabled = false;
     generateButton.disabled = false;
+    generateAllButton.disabled = false;
     refreshButton.textContent = "Refresh";
   }
 }
@@ -110,6 +117,7 @@ async function handleDeletePending(recordId, buttonElement) {
 
 async function handleGeneratePending() {
   generateButton.disabled = true;
+  generateAllButton.disabled = true;
   generateButton.textContent = "Generating...";
   actionMessageElement.textContent = "Generating pending cards...";
 
@@ -124,6 +132,29 @@ async function handleGeneratePending() {
     actionMessageElement.textContent = `Generate failed: ${message}`;
   } finally {
     generateButton.disabled = false;
+    generateAllButton.disabled = false;
     generateButton.textContent = "Generate pending cards";
+  }
+}
+
+async function handleGenerateAllPending() {
+  generateButton.disabled = true;
+  generateAllButton.disabled = true;
+  generateAllButton.textContent = "Generating all...";
+  actionMessageElement.textContent = "Generating all pending cards...";
+
+  try {
+    const result = await generateAllPending(backendBaseUrl);
+    actionMessageElement.textContent =
+      `${result.status}: ${result.message} ` +
+      `(processed=${result.processed_count}, success=${result.success_count}, failed=${result.failed_count})`;
+    await loadQueue();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error.";
+    actionMessageElement.textContent = `Generate all failed: ${message}`;
+  } finally {
+    generateButton.disabled = false;
+    generateAllButton.disabled = false;
+    generateAllButton.textContent = "Generate all pending cards";
   }
 }

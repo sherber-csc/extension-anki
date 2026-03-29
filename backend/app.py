@@ -12,6 +12,7 @@ from backend.audio_service import AudioService
 from backend.capture_service import CaptureService
 from backend.config import AppConfig, DEFAULT_CONFIG
 from backend.contracts import (
+    GENERATE_ALL_PENDING_ENDPOINT,
     GENERATE_PENDING_ENDPOINT,
     GENERATION_PREFLIGHT_ENDPOINT,
     QUEUE_ENDPOINT,
@@ -114,6 +115,11 @@ def create_handler(context: AppContext):
             self._send_json(HTTPStatus.NOT_FOUND, {"status": "not_found"})
 
         def do_POST(self) -> None:  # noqa: N802
+            if self.path == GENERATE_ALL_PENDING_ENDPOINT:
+                response_payload = context.generation_service.generate_all_pending().to_dict()
+                self._send_json(HTTPStatus.OK, response_payload)
+                return
+
             if self.path == GENERATE_PENDING_ENDPOINT:
                 response_payload = context.generation_service.generate_pending().to_dict()
                 self._send_json(HTTPStatus.OK, response_payload)

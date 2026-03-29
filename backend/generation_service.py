@@ -52,3 +52,36 @@ class GenerationService:
             word_key=result.word_key,
             error_message=result.error_message,
         )
+
+    def generate_all_pending(self) -> GeneratePendingResponse:
+        processed_count = 0
+        success_count = 0
+        failed_count = 0
+
+        while True:
+            response = self.generate_pending()
+            if response.status == "no_pending_items":
+                if processed_count == 0:
+                    return response
+                break
+
+            processed_count += response.processed_count
+            success_count += response.success_count
+            failed_count += response.failed_count
+
+        if failed_count == 0:
+            return GeneratePendingResponse(
+                status="processed_all_success",
+                message="Processed all pending records successfully.",
+                processed_count=processed_count,
+                success_count=success_count,
+                failed_count=failed_count,
+            )
+
+        return GeneratePendingResponse(
+            status="processed_all_with_failures",
+            message="Processed all pending records with failures.",
+            processed_count=processed_count,
+            success_count=success_count,
+            failed_count=failed_count,
+        )

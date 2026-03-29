@@ -56,8 +56,23 @@ QUEUE_STATUSES: Final[tuple[str, ...]] = (
 
 CAPTURE_ENDPOINT: Final[str] = "/api/captures"
 QUEUE_ENDPOINT: Final[str] = "/queue"
+GENERATE_ALL_PENDING_ENDPOINT: Final[str] = "/generate-all-pending"
 GENERATE_PENDING_ENDPOINT: Final[str] = "/generate-pending"
 GENERATION_PREFLIGHT_ENDPOINT: Final[str] = "/generation-preflight"
+
+GENERATE_ALL_PENDING_RESPONSE_STATUSES: Final[tuple[str, ...]] = (
+    "no_pending_items",
+    "processed_all_success",
+    "processed_all_with_failures",
+)
+
+GENERATE_ALL_PENDING_RESPONSE_FIELDS: Final[tuple[str, ...]] = (
+    "status",
+    "message",
+    "processed_count",
+    "success_count",
+    "failed_count",
+)
 
 GENERATE_PENDING_RESPONSE_STATUSES: Final[tuple[str, ...]] = (
     "no_pending_items",
@@ -114,6 +129,9 @@ RESPONSE_STATUS_TEXTS: Final[dict[str, str]] = {
 EXTENSION_PROTOCOL_SNAPSHOT: Final[dict[str, object]] = {
     "captureEndpoint": CAPTURE_ENDPOINT,
     "queueEndpoint": QUEUE_ENDPOINT,
+    "generateAllPendingEndpoint": GENERATE_ALL_PENDING_ENDPOINT,
+    "generateAllPendingResponseFields": list(GENERATE_ALL_PENDING_RESPONSE_FIELDS),
+    "generateAllPendingResponseStatuses": list(GENERATE_ALL_PENDING_RESPONSE_STATUSES),
     "generatePendingEndpoint": GENERATE_PENDING_ENDPOINT,
     "generationPreflightEndpoint": GENERATION_PREFLIGHT_ENDPOINT,
     "deletePendingResponseFields": list(DELETE_PENDING_RESPONSE_FIELDS),
@@ -147,6 +165,9 @@ def render_extension_protocol_js() -> str:
             "",
             "export const CAPTURE_ENDPOINT = PROTOCOL.captureEndpoint;",
             "export const QUEUE_ENDPOINT = PROTOCOL.queueEndpoint;",
+            "export const GENERATE_ALL_PENDING_ENDPOINT = PROTOCOL.generateAllPendingEndpoint;",
+            "export const GENERATE_ALL_PENDING_RESPONSE_FIELDS = Object.freeze(PROTOCOL.generateAllPendingResponseFields);",
+            "export const GENERATE_ALL_PENDING_RESPONSE_STATUSES = Object.freeze(PROTOCOL.generateAllPendingResponseStatuses);",
             "export const GENERATE_PENDING_ENDPOINT = PROTOCOL.generatePendingEndpoint;",
             "export const GENERATION_PREFLIGHT_ENDPOINT = PROTOCOL.generationPreflightEndpoint;",
             "export const DELETE_PENDING_RESPONSE_FIELDS = Object.freeze(PROTOCOL.deletePendingResponseFields);",

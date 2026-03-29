@@ -132,6 +132,88 @@ class GenerationServiceTestCase(unittest.TestCase):
             loaded.error_message,
         )
 
+    def test_generate_all_pending_returns_no_pending_items_for_empty_queue(self) -> None:
+        response = self.service.generate_all_pending()
+
+        self.assertEqual("no_pending_items", response.status)
+        self.assertEqual(0, response.processed_count)
+        self.assertEqual(0, response.success_count)
+        self.assertEqual(0, response.failed_count)
+        self.assertEqual([], self.single_generation_service.calls)
+
+    def test_generate_all_pending_processes_all_pending_in_record_id_order(self) -> None:
+        first = self._create_pending("grammar", captured_at="2026-03-29T00:00:00+00:00")
+        second = self._create_pending("simple", captured_at="2026-03-29T00:01:00+00:00")
+        third = self._create_pending("attempt", captured_at="2026-03-29T00:02:00+00:00")
+
+        for record in (first, second, third):
+            self.single_generation_service.results_by_record_id[record.record_id] = (
+                SingleGenerationResult.success(
+                    record_id=record.record_id,
+                    word_key=record.word_key,
+                    note_id=record.record_id,
+                    audio_filename=f"{record.word_key}.wav",
+                )
+            )
+
+        response = self.service.generate_all_pending()
+        queue_items = {item.record_id: item for item in self.queue_manager.list_recent(limit=50)}
+
+        self.assertEqual("processed_all_success", response.status)
+        self.assertEqual(3, response.processed_count)
+        self.assertEqual(3, response.success_count)
+        self.assertEqual(0, response.failed_count)
+        self.assertEqual(
+            [first.record_id, second.record_id, third.record_id],
+            self.single_generation_service.calls,
+        )
+        self.assertEqual("success", queue_items[first.record_id].status)
+        self.assertEqual("success", queue_items[second.record_id].status)
+        self.assertEqual("success", queue_items[third.record_id].status)
+
+    def test_generate_all_pending_continues_after_failures_and_returns_summary(self) -> None:
+        first = self._create_pending("retry", captured_at="2026-03-29T00:00:00+00:00")
+        second = self._create_pending("grammar", captured_at="2026-03-29T00:01:00+00:00")
+        third = self._create_pending("simple", captured_at="2026-03-29T00:02:00+00:00")
+
+        self.single_generation_service.results_by_record_id[first.record_id] = (
+            SingleGenerationResult.failed(
+                record_id=first.record_id,
+                word_key=first.word_key,
+                error_message="word already exists in Anki for word_key=retry",
+            )
+        )
+        self.single_generation_service.results_by_record_id[second.record_id] = (
+            SingleGenerationResult.success(
+                record_id=second.record_id,
+                word_key=second.word_key,
+                note_id=123,
+                audio_filename="grammar.wav",
+            )
+        )
+        self.single_generation_service.results_by_record_id[third.record_id] = (
+            SingleGenerationResult.failed(
+                record_id=third.record_id,
+                word_key=third.word_key,
+                error_message="audio generation failed: PowerShell is not available.",
+            )
+        )
+
+        response = self.service.generate_all_pending()
+        queue_items = {item.record_id: item for item in self.queue_manager.list_recent(limit=50)}
+
+        self.assertEqual("processed_all_with_failures", response.status)
+        self.assertEqual(3, response.processed_count)
+        self.assertEqual(1, response.success_count)
+        self.assertEqual(2, response.failed_count)
+        self.assertEqual(
+            [first.record_id, second.record_id, third.record_id],
+            self.single_generation_service.calls,
+        )
+        self.assertEqual("failed", queue_items[first.record_id].status)
+        self.assertEqual("success", queue_items[second.record_id].status)
+        self.assertEqual("failed", queue_items[third.record_id].status)
+
     def _create_pending(self, surface_form: str, *, captured_at: str):
         request = CaptureRequest(
             surface_form=surface_form,
